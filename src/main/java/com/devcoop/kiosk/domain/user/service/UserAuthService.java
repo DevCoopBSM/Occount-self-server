@@ -10,73 +10,74 @@ import com.devcoop.kiosk.global.exception.enums.ErrorCode;
 import com.devcoop.kiosk.global.utils.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.Map;
 
 
 @Service
 @RequiredArgsConstructor
 public class UserAuthService {
 
-    private static final Logger logger = LoggerFactory.getLogger(UserAuthService.class);
+//    private static final Logger logger = LoggerFactory.getLogger(UserAuthService.class);
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
-    private final Long exprTime = 1000 * 60 * 60L;
+    private static final Long exprTime = 1000 * 60 * 30L;
+    private static final String DEFAULT_PIN_CODE = "1234";
 
     @Value("${jwt.secret}")
     private String secretKey;
 
     @Transactional
-    public LoginResponse login(LoginRequest dto) throws GlobalException {
-        String userCode = dto.getUserCode();
-        String userPin = dto.getUserPin();
-        logger.info(userPin);
-        logger.info("Attempting login foa userCode: {}", userCode);
+    public ResponseEntity<?> login(LoginRequest dto) throws GlobalException {
+        String userCode = dto.userCode();
+        String userPin = dto.userPin();
 
-        User user = userRepository.findByUserCode(userCode);
-
-        if (user == null) {
-            logger.error("User not found for userCode: {}", userCode);
-            throw new GlobalException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        logger.info("User found: {} - Verifying PIN", user.getUserName());
+        User user = userRepository.findByUserCode(userCode)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
 
         if (!bCryptPasswordEncoder.matches(userPin, user.getUserPin())) {
-            logger.error("Invalid PIN for userCode: {}", userCode);
             throw new RuntimeException("핀 번호가 옳지 않습니다");
         }
 
-        logger.info("PIN verified for userCode: {} - Generating JWT token", userCode);
+        if (userCode.equals(DEFAULT_PIN_CODE) && user.getUserCode().equals(DEFAULT_PIN_CODE)) {
+            // 리다이렉션 URI과 메시지를 포함한 응답 생성
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "안전하지 않은 비밀번호입니다. 비밀번호를 변경해주세요");
+            response.put("redirectUrl", "/pin/change");
+
+            return ResponseEntity.status(HttpStatus.OK).body(response);
+        }
 
         String token = JwtUtil.createJwt(userCode, secretKey, exprTime);
 
-        logger.info("JWT token generated for userCode: {}", userCode);
-
-        return LoginResponse.builder()
+        LoginResponse response = LoginResponse.builder()
                 .token(token)
                 .userNumber(user.getUserNumber())
                 .userCode(user.getUserCode())
                 .userName(user.getUserName())
                 .userPoint(user.getUserPoint())
                 .build();
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @Transactional
-    public void changePassword(PinChangeRequest dto) throws GlobalException {
-        String userCode = dto.getUserCode(); // codeNumber를 userCode로 변경
-        String userPin = dto.getUserPin(); // pin을 userPin으로 변경
-        String newPin = dto.getNewPin();
+    public ResponseEntity<?> changePassword(PinChangeRequest dto) throws GlobalException {
+        String userCode = dto.userCode(); // codeNumber를 userCode로 변경
+        String userPin = dto.userPin(); // pin을 userPin으로 변경
+        String newPin = dto.newPin();
 
-        User user = userRepository.findByUserCode(userCode); // 메서드 호출 수정
 
-        if (user == null) {
-            throw new GlobalException(ErrorCode.USER_NOT_FOUND);
-        }
+        Map<String, String> response = new HashMap<>();
+        User user = userRepository.findByUserCode(userCode)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND)); // 메서드 호출 수정
 
         if (!bCryptPasswordEncoder.matches(userPin, user.getUserPin())) {
             throw new RuntimeException("현재 핀 번호가 옳지 않습니다");
@@ -90,19 +91,20 @@ public class UserAuthService {
 
         user.changePin(encodedPin); // update 메서드를 changePin으로 변경
         userRepository.save(user);
+
+        response.put("message", "성공적으로 비밀번호를 변경하였습니다");
+        response.put("redirectUrl", "/");
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @Transactional
     public void resetPassword(String userCode) throws GlobalException {
-        String resetPassword = "1234";
 
-        User user = userRepository.findByUserCode(userCode); // 메서드 호출 수정
+        User user = userRepository.findByUserCode(userCode)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));// 메서드 호출 수정
 
-        if (user == null) {
-            throw new GlobalException(ErrorCode.USER_NOT_FOUND);
-        }
-
-        user.changePin(bCryptPasswordEncoder.encode(resetPassword)); // update 메서드를 changePin으로 변경
+        user.changePin(bCryptPasswordEncoder.encode(DEFAULT_PIN_CODE)); // update 메서드를 changePin으로 변경
         userRepository.save(user);
     }
 }

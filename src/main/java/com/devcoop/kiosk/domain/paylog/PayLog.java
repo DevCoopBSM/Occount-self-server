@@ -1,6 +1,8 @@
 package com.devcoop.kiosk.domain.paylog;
 
+import com.devcoop.kiosk.domain.item.types.EventType;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -29,15 +31,16 @@ public class PayLog {
     private int payedPoint; // 결제한 금액, 기존 point를 payedPoint로 변경
     
     private int afterPoint; // 결제 후 금액 추가
-    
+
     private String managedEmail; // 담당 매점부 이메일, 기존 chargerId를 managedEmail로 변경
-    
-    private String eventType; // 이벤트 유형, 기존 verifyKey와 studentName을 제거하고 eventType을 추가
+
+    @Enumerated(value = EnumType.STRING)
+    private EventType eventType; // 이벤트 유형, 기존 verifyKey와 studentName을 제거하고 eventType을 추가
 
     @Builder
-    public PayLog(int payId, String userCode, LocalDateTime payDate, String payType, 
-                  int beforePoint, int payedPoint, int afterPoint, 
-                  String managedEmail, String eventType) {
+    public PayLog(int payId, String userCode, LocalDateTime payDate, String payType,
+                  int beforePoint, int payedPoint, int afterPoint,
+                  String managedEmail, EventType eventType) {
         this.payId = payId;
         this.userCode = userCode;
         this.payDate = payDate;

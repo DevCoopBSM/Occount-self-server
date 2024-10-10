@@ -1,6 +1,7 @@
 package com.devcoop.kiosk.domain.item.repository;
 
 import com.devcoop.kiosk.domain.item.Item;
+import com.devcoop.kiosk.domain.item.presentation.dto.NonBarcodeItemResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -23,4 +24,7 @@ public interface ItemRepository extends JpaRepository<Item, Integer> {
     // 이벤트가 존재하는 모든 상품 조회
     @Query("SELECT i FROM Item i WHERE i.event <> 'NONE'")
     List<Item> findAllByEvent();
+
+    @Query("SELECT new com.devcoop.kiosk.domain.item.presentation.dto.NonBarcodeItemResponse(i.itemName, i.itemPrice) FROM Item i WHERE i.itemCode = 'NONE'")
+    List<NonBarcodeItemResponse> findAllByItemCode();
 }

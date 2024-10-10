@@ -3,6 +3,8 @@ package com.devcoop.kiosk.domain.user.service;
 import com.devcoop.kiosk.domain.user.User;
 import com.devcoop.kiosk.domain.user.presentation.dto.UserPointRequest;
 import com.devcoop.kiosk.domain.user.repository.UserRepository;
+import com.devcoop.kiosk.global.exception.GlobalException;
+import com.devcoop.kiosk.global.exception.enums.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -15,22 +17,19 @@ public class PointServiceImpl implements UserPointService {
     private final UserRepository userRepository;
 
     @Transactional
-    public Object deductPoints(UserPointRequest userPointRequestDto) {
-        System.out.println("deductPoint 실행");
+    public Object deductPoints(UserPointRequest userPointRequestDto) throws GlobalException {
         String userCode = userPointRequestDto.userCode(); // codeNumber를 userCode로 변경
-        User user = userRepository.findByUserCode(userCode); // 메서드 호출 수정
+        User user = userRepository.findByUserCode(userCode)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND)); // 메서드 호출 수정
 
         System.out.println(user);
 
         try {
             if (user != null && user.getUserPoint() >= userPointRequestDto.totalPrice()) {
-                System.out.println("if 문 통과");
                 int newPoint = user.getUserPoint() - userPointRequestDto.totalPrice();
                 System.out.println(newPoint);
                 user.setUserPoint(newPoint); // setPoint를 setUserPoint로 변경
                 userRepository.save(user);
-
-                System.out.println("결제 후 남은 포인트는 : " + newPoint + "원 입니다.");
                 return newPoint;
             }
 

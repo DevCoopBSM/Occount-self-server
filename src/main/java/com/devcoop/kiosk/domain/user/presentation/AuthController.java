@@ -1,7 +1,6 @@
 package com.devcoop.kiosk.domain.user.presentation;
 
 import com.devcoop.kiosk.domain.user.presentation.dto.LoginRequest;
-import com.devcoop.kiosk.domain.user.presentation.dto.LoginResponse;
 import com.devcoop.kiosk.domain.user.presentation.dto.PinChangeRequest;
 import com.devcoop.kiosk.domain.user.service.UserAuthService;
 import com.devcoop.kiosk.global.exception.GlobalException;
@@ -21,9 +20,8 @@ public class AuthController {
 
     @PostMapping("/signIn")
     @Operation(summary = "login", description = "로그인")
-    public LoginResponse login(@RequestBody LoginRequest loginRequest) throws GlobalException {
-        LoginResponse result = userAuthService.login(loginRequest);
-        return result;
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) throws GlobalException {
+        return userAuthService.login(loginRequest);
     }
 
     @PutMapping("/pwChange")

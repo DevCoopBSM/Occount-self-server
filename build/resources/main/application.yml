@@ -1,25 +1,43 @@
 spring:
   datasource:
-    url: jdbc:mysql://${DB_HOST}/${DB_NAME}?serverTimezone=UTC&characterEncoding=UTF-8
-    password: ${DB_PASSWORD}
+    url: jdbc:mysql://${DB_HOST}/${DB_NAME}?serverTimezone=UTC&characterEncoding=UTF-8&useSSL=true&requireSSL=true&verifyServerCertificate=false&autoReconnect=true
     username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 10
+      connection-timeout: 30000
+      maximum-pool-size: 30
+      idle-timeout: 10
+      max-lifetime: 1800000
+      allow-pool-suspension: true
   jpa:
     hibernate:
       ddl-auto: update
-    generate-ddl: true
-    show-sql: true
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+        default_batch_fetch_size: 100
+    generate-ddl: true
   main:
     allow-bean-definition-overriding: true
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: pjjoon1379@gmail.com
+    password: your-email-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 jwt:
   secret: DevCoopKioskAuthCertificateJsonWebTokenSecretKey
-
-db:
-  imageUrl: ~/server/kiosk/devcoop_self_counter_server_v1/infra/images
 
 server:
   servlet:
@@ -28,3 +46,6 @@ server:
       charset: UTF-8
       enabled: true
       force: true
+
+db:
+  imageUrl: './'

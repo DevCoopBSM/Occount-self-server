@@ -1,5 +1,6 @@
 package com.devcoop.kiosk.domain.paylog.presentation.dto;
 
+import com.devcoop.kiosk.domain.item.types.EventType;
 import com.devcoop.kiosk.domain.paylog.PayLog;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
@@ -8,8 +9,7 @@ import lombok.Builder;
 public record PayLogRequest(
         @NotBlank(message = "바코드는 필수 입력사항 입니다")
         String userCode, 
-        int payedPoint, // 결제된 포인트
-        String managedEmail 
+        int payedPoint // 결제된 포인트
 ) {
 
     public PayLog toEntity(int beforePoint, int afterPoint) { 
@@ -20,7 +20,7 @@ public record PayLogRequest(
                 .afterPoint(afterPoint) // 결제 후 남은 포인트
                 .managedEmail("Kiosk")
                 .payType("1") 
-                .eventType("") 
+                .eventType(EventType.NONE)
                 .build();
     }
 }
