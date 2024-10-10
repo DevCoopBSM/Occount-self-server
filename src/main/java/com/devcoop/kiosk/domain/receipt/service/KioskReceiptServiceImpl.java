@@ -2,10 +2,12 @@ package com.devcoop.kiosk.domain.receipt.service;
 
 import com.devcoop.kiosk.domain.item.Item;
 import com.devcoop.kiosk.domain.item.repository.ItemRepository;
+import com.devcoop.kiosk.domain.item.types.EventType;
 import com.devcoop.kiosk.domain.paylog.presentation.dto.KioskItemInfo;
 import com.devcoop.kiosk.domain.paylog.presentation.dto.KioskRequest;
 import com.devcoop.kiosk.domain.receipt.KioskReceipt;
 import com.devcoop.kiosk.domain.receipt.repository.KioskReceiptRepository;
+import com.devcoop.kiosk.domain.receipt.types.SaleType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +25,7 @@ public class KioskReceiptServiceImpl implements ReceiptService {
 
     @Override
     public ResponseEntity<Object> save(KioskRequest kioskRequest) {
-        List<KioskItemInfo> requestItems = kioskRequest.getItems();
+        List<KioskItemInfo> requestItems = kioskRequest.items();
         System.out.println("requestItemList = " + requestItems);
 
         for (KioskItemInfo itemInfo : requestItems) {
@@ -36,9 +38,9 @@ public class KioskReceiptServiceImpl implements ReceiptService {
             }
 
             // 이벤트 타입 설정
-            String eventType = "NONE";
-            if (item.getEvent().equals("ONE_PLUS_ONE")) {
-                eventType = "ONE_PLUS_ONE";
+            EventType eventType = EventType.NONE;
+            if (item.getEvent() == EventType.ONE_PLUS_ONE) {
+                eventType = EventType.ONE_PLUS_ONE;
             }
 
             // KioskReceipt 객체 생성 및 데이터베이스 저장
@@ -46,12 +48,11 @@ public class KioskReceiptServiceImpl implements ReceiptService {
                 .tradedPoint(itemInfo.dcmSaleAmt()) // 거래 금액 설정
                 .itemName(item.getItemName()) // 품목 이름 설정
                 .saleQty(itemInfo.saleQty()) // 품목 수량 설정
-                .userCode(kioskRequest.getUserId()) // 사용자 바코드 설정
+                .userCode(kioskRequest.userId()) // 사용자 바코드 설정
                 .itemCode(String.valueOf(item.getItemId())) // 품목 코드 설정
-                .saleType((byte) 0) // 결제 타입 설정 (0: 정상 결제)
+                .saleType(SaleType.NORMAL) // 결제 타입 설정 (0: 정상 결제)
                 .eventType(eventType) // 이벤트 타입 설정
                 .build();
-            System.out.println("kioskReceipt = " + kioskReceipt);
     
 
             kioskReceiptRepository.save(kioskReceipt); // 데이터베이스에 저장

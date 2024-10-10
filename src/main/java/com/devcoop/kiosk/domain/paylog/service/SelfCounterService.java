@@ -2,6 +2,7 @@ package com.devcoop.kiosk.domain.paylog.service;
 
 import com.devcoop.kiosk.domain.item.Item;
 import com.devcoop.kiosk.domain.item.repository.ItemRepository;
+import com.devcoop.kiosk.domain.item.types.EventType;
 import com.devcoop.kiosk.domain.paylog.PayLog;
 import com.devcoop.kiosk.domain.paylog.presentation.dto.KioskItemInfo;
 import com.devcoop.kiosk.domain.paylog.presentation.dto.KioskRequest;
@@ -10,9 +11,12 @@ import com.devcoop.kiosk.domain.paylog.presentation.dto.Payments;
 import com.devcoop.kiosk.domain.paylog.repository.PayLogRepository;
 import com.devcoop.kiosk.domain.receipt.KioskReceipt;
 import com.devcoop.kiosk.domain.receipt.repository.KioskReceiptRepository;
+import com.devcoop.kiosk.domain.receipt.types.SaleType;
 import com.devcoop.kiosk.domain.user.User;
 import com.devcoop.kiosk.domain.user.presentation.dto.UserPointRequest;
 import com.devcoop.kiosk.domain.user.repository.UserRepository;
+import com.devcoop.kiosk.global.exception.GlobalException;
+import com.devcoop.kiosk.global.exception.enums.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,23 +36,24 @@ public class SelfCounterService {
     private final KioskReceiptRepository kioskReceiptRepository;
     private final ItemRepository itemRepository;
 
-    public int deductPoints(UserPointRequest userPointRequest) {
-        log.info("userPointRequest = {}", userPointRequest);
+    public int deductPoints(UserPointRequest userPointRequest) throws GlobalException {
         String userCode = userPointRequest.userCode();
-        User user = userRepository.findByUserCode(userCode);
+        User user = userRepository.findByUserCode(userCode)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+        log.info("userName = {}", user.getUserName());
 
-        if (user == null) {
-            throw new RuntimeException("사용자를 찾을 수 없습니다."); // 이 부분을 더 구체적인 예외 클래스로 변경하는 것을 고려할 수 있습니다.
+        log.info("포인트 차감 전: {}", user.getUserPoint());
+        log.info("차감할 포인트: {}", userPointRequest.totalPrice());
+
+
+        if (user.getUserPoint() < userPointRequest.totalPrice()) {
+            throw new RuntimeException("결제하는 것에 실패했습니다.");
         }
 
-        if (user.getUserPoint() >= userPointRequest.totalPrice()) {
-            int newPoint = user.getUserPoint() - userPointRequest.totalPrice();
-            user.setUserPoint(newPoint);
-            userRepository.save(user);
-            return newPoint; // 새로운 포인트 반환
-        } else {
-            throw new RuntimeException("결제하는 것에 실패했습니다."); // 이 부분도 커스텀 예외 클래스로 변경을 고려해볼 수 있습니다.
-        }
+        int newPoint = user.getUserPoint() - userPointRequest.totalPrice();
+        user.setUserPoint(newPoint);
+        userRepository.save(user);
+        return newPoint;
     }
 
     public void savePayLog(int beforePoint, int afterPoint, PayLogRequest payLogRequest) {
@@ -67,7 +72,7 @@ public class SelfCounterService {
 
     public void saveReceipt(KioskRequest kioskRequest) {
         try {
-            List<KioskItemInfo> requestItems = kioskRequest.getItems();
+            List<KioskItemInfo> requestItems = kioskRequest.items();
             log.info("requestItemList = {}", requestItems);
             for (KioskItemInfo itemInfo : requestItems) {
                 Item item = itemRepository.findByItemName(itemInfo.itemName());
@@ -77,19 +82,19 @@ public class SelfCounterService {
                     throw new RuntimeException("없는 상품입니다.");
                 }
 
-                String eventType = "NONE";
+                EventType eventType = EventType.NONE;
 
-                if ("ONE_PLUS_ONE".equals(item.getEvent())) {
-                    eventType = "ONE_PLUS_ONE";
+                if (item.getEvent() == EventType.ONE_PLUS_ONE) {
+                    eventType = EventType.ONE_PLUS_ONE;
                 }
 
                 KioskReceipt kioskReceipt = KioskReceipt.builder()
                         .tradedPoint(itemInfo.dcmSaleAmt())  // 필드명 변경
                         .itemName(item.getItemName())
                         .saleQty((short) itemInfo.saleQty())
-                        .userCode(kioskRequest.getUserId())  // 필드명 변경
+                        .userCode(kioskRequest.userId())  // 필드명 변경
                         .itemCode(String.valueOf(item.getItemId()))  // 필드명 변경
-                        .saleType((byte) 0)
+                        .saleType(SaleType.NORMAL)
                         .eventType(eventType)  // eventType을 String으로 처리
                         .build();
 
@@ -107,19 +112,18 @@ public class SelfCounterService {
 
         try {
             // 포인트 차감 전 beforePoint를 얻기 위해 User 상태 조회
-            User userBeforePayment = userRepository.findByUserCode(payments.payLogRequest().userCode());
+            User userBeforePayment = userRepository.findByUserCode(payments.payLogRequest().userCode())
+                    .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+
+            log.info("userBeforePayment = {}", userBeforePayment); // userBeforePayment.getUserCode() 로 userCode를 받아서 사용;
             int beforePoint = userBeforePayment.getUserPoint();
 
             // 포인트 차감
-            UserPointRequest userPointRequestDto = payments.userPointRequest();
-            int newPoints = deductPoints(userPointRequestDto);
+            int newPoints = deductPoints(payments.userPointRequest());
             response.put("remainingPoints", newPoints); // 새로운 포인트 반환
 
-            // afterPoint는 차감된 포인트 값을 사용하여 직접 계산
-            int afterPoint = newPoints; // 이미 차감된 후의 포인트가 newPoints에 저장되어 있음
-
             // 결제 로그 저장 시 정확한 beforePoint와 afterPoint를 전달
-            savePayLog(beforePoint, afterPoint, payments.payLogRequest());
+            savePayLog(beforePoint, newPoints, payments.payLogRequest());
 
             // 영수증 저장
             saveReceipt(payments.kioskRequest());
@@ -129,10 +133,10 @@ public class SelfCounterService {
         } catch (Exception e) {
             log.error("트랜잭션 실패 및 롤백", e);
             throw new RuntimeException(e.getMessage(), e); // 예외를 다시 던져 트랜잭션을 롤백합니다.
+        } catch (GlobalException e) {
+            throw new RuntimeException(e);
         }
 
         return response;
     }
-
-
 }

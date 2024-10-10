@@ -1,14 +1,12 @@
 package com.devcoop.kiosk.domain.user.presentation.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.Builder;
 
-@Getter
-@AllArgsConstructor
-@NoArgsConstructor
-public class PinChangeRequest {
-    private String userCode; // codeNumber -> userCode
-    private String userPin;  // pin -> userPin
-    private String newPin;
+@Builder
+public record PinChangeRequest(
+        String userCode, // codeNumber -> userCode
+        String userPin,  // pin -> userPin
+        String newPin  // newPin -> newPin
+){
+
 }

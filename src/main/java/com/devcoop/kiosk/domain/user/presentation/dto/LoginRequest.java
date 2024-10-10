@@ -1,13 +1,11 @@
 package com.devcoop.kiosk.domain.user.presentation.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.Builder;
 
-@Getter
-@AllArgsConstructor
-@NoArgsConstructor
-public class LoginRequest {
-    private String userCode; // codeNumber -> userCode
-    private String userPin;  // pin -> userPin
+@Builder
+public record LoginRequest(
+        String userCode, // codeNumber -> userCode
+        String userPin  // pin -> userPin
+) {
+
 }

@@ -25,11 +25,11 @@ public class EventItemService {
     public List<EventItemResponse> read() {
         List<Item> items = itemRepository.findAllByEvent();
         return items.stream()
-                .map((Function<Item, EventItemResponse>) item -> EventItemResponse.builder()
+                .map(item -> EventItemResponse.builder()
                         .itemCode(item.getItemCode()) // barcode를 itemCode로 변경
                         .itemName(item.getItemName())
                         .itemPrice(item.getItemPrice())
-                        .event(item.getEvent())
+                        .event(item.getEvent().name())
                         .image(item.getItemImage() != null ? item.getItemImage() : defaultUrl)
                         .build())
                 .collect(Collectors.toList());

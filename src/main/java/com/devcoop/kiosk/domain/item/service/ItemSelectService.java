@@ -3,6 +3,7 @@ package com.devcoop.kiosk.domain.item.service;
 import com.devcoop.kiosk.domain.item.Item;
 import com.devcoop.kiosk.domain.item.presentation.dto.ItemResponse;
 import com.devcoop.kiosk.domain.item.repository.ItemRepository;
+import com.devcoop.kiosk.domain.item.types.EventType;
 import com.devcoop.kiosk.global.exception.GlobalException;
 import com.devcoop.kiosk.global.exception.enums.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -33,12 +34,12 @@ public class ItemSelectService {
             }
 
             int quantity = 1;
-            String eventStatus = "NONE";
+            EventType eventStatus = EventType.NONE;
 
             // 이벤트에 따른 수량 및 상태 처리 로직
             if ("ONE_PLUS_ONE".equals(item.getEvent())) {
                 quantity = 2;
-                eventStatus = "ONE_PLUS_ONE";
+                eventStatus = EventType.ONE_PLUS_ONE;
             }
 
             ItemResponse itemResponse = ItemResponse.builder()

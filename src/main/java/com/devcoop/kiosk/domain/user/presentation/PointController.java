@@ -2,6 +2,7 @@ package com.devcoop.kiosk.domain.user.presentation;
 
 import com.devcoop.kiosk.domain.user.presentation.dto.UserPointRequest;
 import com.devcoop.kiosk.domain.user.service.UserPointService;
+import com.devcoop.kiosk.global.exception.GlobalException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,7 @@ public class PointController {
     private final UserPointService userPointService;
     @PutMapping("/pay")
     @Operation(summary = "pay", description = "결제")
-    public Object deductPoints(@RequestBody UserPointRequest requestDto) {
+    public Object deductPoints(@RequestBody UserPointRequest requestDto) throws GlobalException {
         Object deductedUserPoint = userPointService.deductPoints(requestDto);
         return deductedUserPoint;
     }

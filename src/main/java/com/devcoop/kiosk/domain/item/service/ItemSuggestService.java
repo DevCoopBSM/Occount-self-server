@@ -12,10 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ItemSuggestService {
   private final ItemRepository itemRepository;
-  private final Random random = new Random(); // Random 객체를 필드로 선언
 
   @Transactional(readOnly = true)
   public String read() {
+    Random random = new Random();
     List<String> items = itemRepository.findNameAll(); // 모든 아이템을 가져옴
 
     int randomIndex = random.nextInt(items.size()); // 무작위 인덱스 생성

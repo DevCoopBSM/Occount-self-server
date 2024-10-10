@@ -7,26 +7,33 @@ import lombok.*;
 
 @Entity
 @Table(name = "common_user")
-@Data
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
     
     @Id
+    @Column(name = "userNumber")
     private String userNumber; // Primary key, 조합원 번호
 
+    @Column(name = "userCode")
     private String userCode; // 학생증 바코드
 
+    @Column(name = "userName")
     private String userName; // 유저 이름
 
+    @Column(name = "userEmail")
     private String userEmail; // 유저 이메일
 
+    @Column(name = "userPassword")
     private String userPassword; // 유저 비밀번호
 
+    @Column(name = "userPin")
     private String userPin; // 유저 셀프 계산대 비밀번호
 
+    @Setter @Column(name = "userPoint")
     private int userPoint; // 유저 포인트
 
+    @Column(name = "userFingerPrint")
     private String userFingerPrint; // 유저 지문 정보 (추가된 필드)
 
     @Enumerated(EnumType.STRING)

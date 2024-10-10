@@ -1,16 +1,19 @@
 package com.devcoop.kiosk.domain.receipt;
 
+import com.devcoop.kiosk.domain.item.types.EventType;
+import com.devcoop.kiosk.domain.receipt.types.SaleType;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "occount_kioskReceipts")
 @Getter
-@ToString
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@EntityListeners(AuditingEntityListener.class)
 public class KioskReceipt {
     
     @Id
@@ -25,17 +28,19 @@ public class KioskReceipt {
     
     private int saleQty; // 품목 수량
     
-    @CreationTimestamp
+    @CreatedDate
     private LocalDateTime saleDate = LocalDateTime.now(); // 거래 발생 시간
     
     private String userCode; // 사용자 바코드
-    
-    private byte saleType; // 결제 타입 (0: 정상 결제, 1: 환불 결제 등)
-    
-    private String eventType; // 이벤트 여부 ('ONE_PLUS_ONE', 'NONE' 등)
+
+    @Enumerated(value = EnumType.STRING)
+    private SaleType saleType; // 결제 타입 (0: 정상 결제, 1: 환불 결제 등)
+
+    @Enumerated(value = EnumType.STRING)
+    private EventType eventType; // 이벤트 여부 ('ONE_PLUS_ONE', 'NONE' 등)
 
     @Builder
-    public KioskReceipt(int receiptId, String itemCode, int tradedPoint, String itemName, int saleQty, LocalDateTime saleDate, String userCode, byte saleType, String eventType) {
+    public KioskReceipt(int receiptId, String itemCode, int tradedPoint, String itemName, int saleQty, LocalDateTime saleDate, String userCode, SaleType saleType, EventType eventType) {
         this.receiptId = receiptId;
         this.itemCode = itemCode;
         this.tradedPoint = tradedPoint;
