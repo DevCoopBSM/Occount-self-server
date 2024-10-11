@@ -25,6 +25,8 @@ public interface ItemRepository extends JpaRepository<Item, Integer> {
     @Query("SELECT i FROM Item i WHERE i.event <> 'NONE'")
     List<Item> findAllByEvent();
 
-    @Query("SELECT new com.devcoop.kiosk.domain.item.presentation.dto.NonBarcodeItemResponse(i.itemName, i.itemPrice) FROM Item i WHERE i.itemCode = 'NONE'")
+    @Query("SELECT new com.devcoop.kiosk.domain.item.presentation.dto.NonBarcodeItemResponse(i.itemName, i.itemPrice) " +
+            "FROM Item i " +
+            "WHERE i.itemCode = 'None' or i.itemCode = ''")
     List<NonBarcodeItemResponse> findAllByItemCode();
 }
