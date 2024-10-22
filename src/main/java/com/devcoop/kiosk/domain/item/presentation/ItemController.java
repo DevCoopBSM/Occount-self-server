@@ -1,7 +1,7 @@
 package com.devcoop.kiosk.domain.item.presentation;
 
 import com.devcoop.kiosk.domain.item.presentation.dto.ItemResponse;
-import com.devcoop.kiosk.domain.item.service.ItemSelectService;
+import com.devcoop.kiosk.domain.item.service.ItemService;
 import com.devcoop.kiosk.global.exception.GlobalException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,13 +15,13 @@ import java.util.List;
 @RequestMapping
 @RequiredArgsConstructor
 @Slf4j @Tag(name = "item", description = "Item API")
-public class SelectItemController {
-  private final ItemSelectService itemSelectService;
-  @GetMapping("/itemSelect")
+public class ItemController {
+  private final ItemService itemSelectService;
+  @GetMapping("/item")
   @Operation(summary = "get item info", description = "아이템 정보 선택")
-  public List<ItemResponse> getItemByBarcode(@RequestParam List<String> barcodes) throws GlobalException {
-    log.info("barcodes = {}", barcodes.toString());
-    List<ItemResponse> itemResponses = itemSelectService.get(barcodes);
+  public List<ItemResponse> getItemByBarcode(@RequestParam List<String> barcode) throws GlobalException {
+    log.info("barcode = {}", barcode.toString());
+    List<ItemResponse> itemResponses = itemSelectService.get(barcode);
     return itemResponses;
   }
 }

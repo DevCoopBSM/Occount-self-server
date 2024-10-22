@@ -17,7 +17,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ItemSelectService {
+public class ItemService {
     private final ItemRepository itemRepository;
 
     @Transactional(readOnly = true)
