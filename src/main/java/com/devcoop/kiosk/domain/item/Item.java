@@ -42,13 +42,13 @@ public class Item {
     @Enumerated(value = EnumType.STRING)
     private EventType event = EventType.NONE; // 이벤트 타입을 String으로 설정
 
-    @Column(name = "event_start_date", columnDefinition = "date DEFAULT NULL")
+    @Column(name = "eventStartDate", columnDefinition = "date DEFAULT NULL")
     private LocalDate eventStartDate;
 
-    @Column(name = "event_end_date", columnDefinition = "date DEFAULT NULL")
+    @Column(name = "eventEndDate", columnDefinition = "date DEFAULT NULL")
     private LocalDate eventEndDate;
 
-    @Column(name = "item_image", columnDefinition = "varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL")
+    @Column(name = "itemImage", columnDefinition = "varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL")
     private String itemImage;
 
     @Builder
