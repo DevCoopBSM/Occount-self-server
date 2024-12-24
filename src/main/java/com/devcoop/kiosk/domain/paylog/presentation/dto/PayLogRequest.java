@@ -1,7 +1,8 @@
 package com.devcoop.kiosk.domain.paylog.presentation.dto;
 
-import com.devcoop.kiosk.domain.item.types.EventType;
 import com.devcoop.kiosk.domain.paylog.PayLog;
+import com.devcoop.kiosk.domain.paylog.types.EventType;
+import com.devcoop.kiosk.domain.paylog.types.PaymentType;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 
@@ -19,7 +20,7 @@ public record PayLogRequest(
                 .payedPoint(payedPoint)
                 .afterPoint(afterPoint) // 결제 후 남은 포인트
                 .managedEmail("Kiosk")
-                .payType("1") 
+                .payType(PaymentType.POINT) 
                 .eventType(EventType.NONE)
                 .build();
     }

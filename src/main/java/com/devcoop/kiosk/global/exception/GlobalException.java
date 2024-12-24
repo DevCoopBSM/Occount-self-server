@@ -1,11 +1,14 @@
 package com.devcoop.kiosk.global.exception;
 
 import com.devcoop.kiosk.global.exception.enums.ErrorCode;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
-@AllArgsConstructor
-public class GlobalException extends Throwable {
+public class GlobalException extends RuntimeException {
     private final ErrorCode errorCode;
+
+    public GlobalException(ErrorCode errorCode) {
+        super(errorCode.getMessage());
+        this.errorCode = errorCode;
+    }
 }

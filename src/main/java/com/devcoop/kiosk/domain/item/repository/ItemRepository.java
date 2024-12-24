@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ItemRepository extends JpaRepository<Item, Integer> {
+public interface ItemRepository extends JpaRepository<Item, Long> {
 
     // 상품 이름으로 조회
     Item findByItemName(String itemName);
@@ -29,4 +29,7 @@ public interface ItemRepository extends JpaRepository<Item, Integer> {
             "FROM Item i " +
             "WHERE i.itemCode = 'None' or i.itemCode = ''")
     List<NonBarcodeItemResponse> findAllByItemCode();
+
+    @Query("SELECT i FROM Item i WHERE i.itemCode = 'None' OR i.itemCode = ''")
+    List<Item> findAllByItemCodeIsNoneOrEmpty();
 }

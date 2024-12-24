@@ -1,5 +1,6 @@
 HELP.md
 .gradle
+.class
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
@@ -9,6 +10,25 @@ daemon/
 wrapper/
 native/
 *.properties
+
+### Compiled files ###
+*.class
+target/
+out/
+build/
+
+### Logs ###
+*.log
+logs/
+
+### Package Files ###
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
 
 ### STS ###
 .apt_generated
@@ -40,6 +60,17 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Properties files ###
 src/main/resources/application.properties
 src/main/resources/application.properties
 *.properties
+
+### OS generated files ###
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

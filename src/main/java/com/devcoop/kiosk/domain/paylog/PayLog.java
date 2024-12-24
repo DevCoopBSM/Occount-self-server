@@ -1,15 +1,28 @@
 package com.devcoop.kiosk.domain.paylog;
 
-import com.devcoop.kiosk.domain.item.types.EventType;
-import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+
+import com.devcoop.kiosk.domain.paylog.types.PaymentType;
+import com.devcoop.kiosk.domain.paylog.types.EventType;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
 @Entity
-@Table(name = "occount_payLog") // 테이블 이름을 새로운 테이블 이름으로 변경
+@Table(name = "occount_payLog")
 @Getter
 @ToString
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -17,30 +30,41 @@ public class PayLog {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int payId; // 결제기록id, 기존의 payNum을 payId로 변경
+    private int payId;
     
-    private String userCode; // 기존 codeNumber를 userCode로 변경
+    @Column(length = 255)
+    private String userCode;
     
     @CreationTimestamp
-    private LocalDateTime payDate; // 결제 날짜, 기존 date를 payDate로 변경
+    private LocalDateTime payDate;
     
-    private String payType; // 결제유형, 기존 type을 payType으로 변경하고 Short에서 String으로 변경
+    @Column(length = 255)
+    @Enumerated(EnumType.STRING)
+    private PaymentType payType;
     
-    private int beforePoint; // 결제 전 금액, 기존 innerPoint를 beforePoint로 변경
+    private int beforePoint;
     
-    private int payedPoint; // 결제한 금액, 기존 point를 payedPoint로 변경
+    private int payedPoint;
     
-    private int afterPoint; // 결제 후 금액 추가
+    private int afterPoint;
 
-    private String managedEmail; // 담당 매점부 이메일, 기존 chargerId를 managedEmail로 변경
+    @Column(length = 255)
+    private String managedEmail;
 
+    @Column(length = 255)
     @Enumerated(value = EnumType.STRING)
-    private EventType eventType; // 이벤트 유형, 기존 verifyKey와 studentName을 제거하고 eventType을 추가
+    private EventType eventType;
+
+    private int cardAmount;
+
+    @Column(length = 255)
+    private String paymentId;
 
     @Builder
-    public PayLog(int payId, String userCode, LocalDateTime payDate, String payType,
+    public PayLog(int payId, String userCode, LocalDateTime payDate, PaymentType payType,
                   int beforePoint, int payedPoint, int afterPoint,
-                  String managedEmail, EventType eventType) {
+                  String managedEmail, EventType eventType,
+                  int cardAmount, String paymentId, String transactionId) {
         this.payId = payId;
         this.userCode = userCode;
         this.payDate = payDate;
@@ -50,5 +74,7 @@ public class PayLog {
         this.afterPoint = afterPoint;
         this.managedEmail = managedEmail;
         this.eventType = eventType;
+        this.cardAmount = cardAmount;
+        this.paymentId = paymentId;
     }
 }

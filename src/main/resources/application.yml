@@ -9,16 +9,16 @@ spring:
       connection-timeout: 30000
       maximum-pool-size: 30
       idle-timeout: 10
-      max-lifetime: 1800000
+      max-lifetime: 580000
       allow-pool-suspension: true
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate 
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
+        dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
         default_batch_fetch_size: 100
     generate-ddl: true
@@ -37,7 +37,7 @@ spring:
             enable: true
 
 jwt:
-  secret: DevCoopKioskAuthCertificateJsonWebTokenSecretKey
+  secret: ${JWT_KEY}
 
 server:
   servlet:
@@ -49,3 +49,8 @@ server:
 
 db:
   imageUrl: './'
+
+payment:
+  api:
+    url: ${PAYMENT_API_URL}
+    apiKey: ${PAYMENT_API_KEY}

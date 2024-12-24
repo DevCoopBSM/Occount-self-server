@@ -1,18 +1,20 @@
 package com.devcoop.kiosk.domain.item.service;
 
-import com.devcoop.kiosk.domain.item.Item;
-import com.devcoop.kiosk.domain.item.presentation.dto.ItemResponse;
-import com.devcoop.kiosk.domain.item.repository.ItemRepository;
-import com.devcoop.kiosk.domain.item.types.EventType;
-import com.devcoop.kiosk.global.exception.GlobalException;
-import com.devcoop.kiosk.global.exception.enums.ErrorCode;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.devcoop.kiosk.domain.item.Item;
+import com.devcoop.kiosk.domain.item.presentation.dto.ItemResponse;
+import com.devcoop.kiosk.domain.item.repository.ItemRepository;
+import com.devcoop.kiosk.global.exception.GlobalException;
+import com.devcoop.kiosk.global.exception.enums.ErrorCode;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -33,25 +35,50 @@ public class ItemService {
                 throw new GlobalException(ErrorCode.BARCODE_NOT_VALID);
             }
 
-            int quantity = 1;
-            EventType eventStatus = EventType.NONE;
-
-            // 이벤트에 따른 수량 및 상태 처리 로직
-            if ("ONE_PLUS_ONE".equals(item.getEvent())) {
-                quantity = 2;
-                eventStatus = EventType.ONE_PLUS_ONE;
-            }
-
             ItemResponse itemResponse = ItemResponse.builder()
-                    .itemName(item.getItemName())  // 필드 이름 일치
-                    .itemPrice(item.getItemPrice())  // 필드 이름 일치
-                    .quantity(quantity)
-                    .eventStatus(eventStatus)  // String 타입으로 변경된 필드
+                    .itemId(item.getItemId())
+                    .itemCode(item.getItemCode())
+                    .itemName(item.getItemName())
+                    .itemPrice(item.getItemPrice())
+                    .eventStatus(item.getEvent())
+                    .itemCategory(item.getItemCategory())
                     .build();
 
             itemResponses.add(itemResponse);
         }
         log.info("{}",itemResponses);
         return itemResponses;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ItemResponse> getAllItems() {
+        List<Item> items = itemRepository.findAll();
+        
+        return items.stream()
+            .map(item -> ItemResponse.builder()
+                    .itemId(item.getItemId())
+                    .itemCode(item.getItemCode())
+                    .itemName(item.getItemName())
+                    .itemPrice(item.getItemPrice())
+                    .eventStatus(item.getEvent())
+                    .itemCategory(item.getItemCategory())
+                    .build())
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ItemResponse> getItemsWithoutBarcode() {
+        List<Item> items = itemRepository.findAllByItemCodeIsNoneOrEmpty();
+        
+        return items.stream()
+            .map(item -> ItemResponse.builder()
+                    .itemId(item.getItemId())
+                    .itemCode(item.getItemCode())
+                    .itemName(item.getItemName())
+                    .itemPrice(item.getItemPrice())
+                    .eventStatus(item.getEvent())
+                    .itemCategory(item.getItemCategory())
+                    .build())
+            .collect(Collectors.toList());
     }
 }
