@@ -48,7 +48,7 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.POST, "/executePayments").authenticated()
                                 .requestMatchers(HttpMethod.GET, "/event-item/get-item").authenticated()
                                 .requestMatchers(HttpMethod.GET, "/item/suggest").authenticated()
-                                .requestMatchers(HttpMethod.GET, "/item/{itemCode}").authenticated()
+                                .requestMatchers(HttpMethod.GET, "/item").authenticated()
                                 .requestMatchers(HttpMethod.GET, "/item/top").authenticated()
                                 .requestMatchers(HttpMethod.GET, "/items/no-barcode").authenticated()
                                 .anyRequest().denyAll()
