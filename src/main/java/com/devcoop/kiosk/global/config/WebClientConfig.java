@@ -9,7 +9,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.WebClient;
+
+import com.devcoop.kiosk.global.utils.security.PaymentApiKeyGenerator;
 
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
@@ -22,8 +25,11 @@ public class WebClientConfig {
     @Value("${payment.api.url}")
     private String paymentApiUrl;
     
-    @Value("${payment.api.apiKey}")
-    private String apiKey;
+    private final PaymentApiKeyGenerator apiKeyGenerator;
+    
+    public WebClientConfig(PaymentApiKeyGenerator apiKeyGenerator) {
+        this.apiKeyGenerator = apiKeyGenerator;
+    }
     
     @Bean
     public WebClient webClient() {
@@ -38,7 +44,12 @@ public class WebClientConfig {
         return WebClient.builder()
             .baseUrl(paymentApiUrl)
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .defaultHeader("X-API-Key", apiKey)
+            .filter((request, next) -> {
+                ClientRequest filteredRequest = ClientRequest.from(request)
+                    .header("X-API-Key", apiKeyGenerator.generateApiKey())
+                    .build();
+                return next.exchange(filteredRequest);
+            })
             .clientConnector(new ReactorClientHttpConnector(httpClient))
             .build();
     }

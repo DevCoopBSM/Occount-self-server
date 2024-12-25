@@ -53,4 +53,7 @@ db:
 payment:
   api:
     url: ${PAYMENT_API_URL}
-    apiKey: ${PAYMENT_API_KEY}
+    secret: ${PAYMENT_API_SECRET_KEY}
+
+api:
+  key: ${API_KEY}

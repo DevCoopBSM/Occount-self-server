@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.devcoop.kiosk.global.utils.security.ApiKeyAuthFilter;
 import com.devcoop.kiosk.global.utils.security.JwtFilter;
 
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,8 @@ public class SecurityConfig {
 
     @Value("${jwt.secret}")
     private String secretKey;
+
+    private final ApiKeyAuthFilter apiKeyAuthFilter;
 
     @Bean
     public JwtFilter jwtFilter() {
@@ -57,7 +60,8 @@ public class SecurityConfig {
                         session -> session
                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .addFilterBefore(jwtFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtFilter(), ApiKeyAuthFilter.class);
 
         return http.build();
     }
