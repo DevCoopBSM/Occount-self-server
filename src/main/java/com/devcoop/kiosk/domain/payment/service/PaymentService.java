@@ -24,6 +24,8 @@ import com.devcoop.kiosk.global.exception.enums.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lombok.Getter;
+import lombok.Builder;
 
 @Service
 @RequiredArgsConstructor
@@ -37,20 +39,14 @@ public class PaymentService {
     private final UserRepository userRepository;
 
     @Transactional
-    public PaymentResponse executeAllTransactions(PaymentRequest payment, String userEmail) throws GlobalException {
+    public PaymentResponse executeAllTransactions(PaymentRequest payment, String userCode) throws GlobalException {
         try {
-            // 사용자 조회
-            User user = userRepository.findByUserEmail(userEmail);
-            if (user == null) {
-                throw new GlobalException(ErrorCode.USER_NOT_FOUND);
-            }
-
-            int userPoint = user.getUserPoint();
+            PaymentContext context = initializePaymentContext(payment, userCode);
             
             return switch (payment.type()) {
-                case CHARGE -> processChargeOnly(payment, userEmail, userPoint);
-                case PAYMENT -> processNormalPayment(payment, userEmail, userPoint);
-                case MIXED -> processMixedPayment(payment, userEmail, userPoint);
+                case CHARGE -> handleChargePayment(payment, context);
+                case PAYMENT -> handleNormalPayment(payment, context);
+                case MIXED -> handleMixedPayment(payment, context);
                 default -> throw new GlobalException(ErrorCode.INVALID_PAYMENT_REQUEST);
             };
             
@@ -63,90 +59,73 @@ public class PaymentService {
         }
     }
 
-    private PaymentResponse processChargeOnly(PaymentRequest payment, String userEmail, int userPoint) {
+    @Getter
+    @Builder
+    private static class PaymentContext {
+        private final String userCode;
+        private final String userEmail;
+        private final int initialPoint;
+        private int currentPoint;
+        private PgResponse cardResponse;
+        
+        public void updatePoint(int newPoint) {
+            this.currentPoint = newPoint;
+        }
+    }
+
+    private PaymentContext initializePaymentContext(PaymentRequest payment, String userCode) {
+        User user = userRepository.findByUserCode(userCode)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+                
+        return PaymentContext.builder()
+                .userCode(userCode)
+                .userEmail(user.getUserEmail())
+                .initialPoint(user.getUserPoint())
+                .currentPoint(user.getUserPoint())
+                .build();
+    }
+
+    private PaymentResponse handleChargePayment(PaymentRequest payment, PaymentContext context) {
         int chargeAmount = payment.charge().amount();
         
-        // 카드 결제 처리
-        PgResponse cardResponse = processCardPayment(chargeAmount, createChargeProduct(chargeAmount), userEmail);
+        // 카드 결제
+        context.cardResponse = processCardPayment(
+            chargeAmount, 
+            createChargeProduct(chargeAmount), 
+            context.getUserEmail()
+        );
         
         // 포인트 충전
-        int updatedPoints = pointService.chargePoints(userEmail, chargeAmount);
+        int updatedPoints = pointService.chargePoints(context.getUserCode(), chargeAmount);
+        context.updatePoint(updatedPoints);
         
-        // 충전 로그 저장
-        chargeLogService.saveChargeLog(
-            userEmail,
-            userPoint,
-            chargeAmount,
-            cardResponse.getTransaction().getTransactionId()
-        );
+        // 로그 저장
+        saveChargeLog(context, chargeAmount);
         
         return PaymentResponse.forCharge(
             chargeAmount,
             updatedPoints,
-            cardResponse.getTransaction().getApprovalNumber()
+            context.getCardResponse().getTransaction().getApprovalNumber()
         );
     }
 
-    private PaymentResponse processMixedPayment(PaymentRequest payment, String userEmail, int userPoint) {
-        int chargeAmount = payment.charge().amount();
-        int paymentAmount = payment.payment().totalAmount();
-        int totalAmount = paymentAmount + chargeAmount;
-        
-        // 카드 결제 처리
-        PgResponse cardResponse = processCardPayment(totalAmount, 
-            createMixedPaymentProducts(payment, chargeAmount), userEmail);
-        
-        // 포인트 충전
-        int updatedPoints = pointService.chargePoints(userEmail, chargeAmount);
-        
-        // 결제 로그 저장
-        payLogService.savePayLog(
-            userEmail,
-            userPoint,
-            0,
-            totalAmount,
-            cardResponse.getTransaction().getTransactionId()
-        );
-        
-        // 영수증 저장
-        receiptService.saveReceipt(payment.payment().items(), userEmail);
-        
-        return PaymentResponse.forMixed(
-            totalAmount,
-            chargeAmount,
-            paymentAmount,
-            updatedPoints,
-            cardResponse.getTransaction().getApprovalNumber()
-        );
-    }
-
-    private PaymentResponse processNormalPayment(PaymentRequest payment, String userEmail, int userPoint) {
+    private PaymentResponse handleNormalPayment(PaymentRequest payment, PaymentContext context) {
         int totalAmount = payment.payment().totalAmount();
         
-        if (userPoint >= totalAmount) {
-            return processPointOnlyPayment(payment, userEmail, userPoint, totalAmount);
-        } else {
-            return processPointAndCardPayment(payment, userEmail, userPoint, totalAmount);
+        if (context.getCurrentPoint() >= totalAmount) {
+            return handlePointOnlyPayment(payment, context, totalAmount);
         }
+        return handlePointAndCardPayment(payment, context, totalAmount);
     }
 
-    private PaymentResponse processPointOnlyPayment(
-        PaymentRequest payment, String userEmail, int userPoint, int totalAmount) {
-        
+    private PaymentResponse handlePointOnlyPayment(PaymentRequest payment, PaymentContext context, int totalAmount) {
         // 포인트 차감
-        int updatedPoints = pointService.deductPoints(userEmail, totalAmount);
+        int updatedPoints = pointService.deductPoints(context.getUserCode(), totalAmount);
+        context.updatePoint(updatedPoints);
         
-        // 결제 로그 저장
-        payLogService.savePayLog(
-            userEmail, 
-            userPoint,
-            totalAmount,  // pointsUsed
-            0,           // cardAmount
-            null        // 포인트만 사용시 승인번호 없음
-        );
-        
-        // 영수증 저장
-        receiptService.saveReceipt(payment.payment().items(), userEmail);
+        // 로그 저장
+        savePaymentLog(context, totalAmount, 0);
+        saveReceipt(payment, context.getUserCode());
         
         return PaymentResponse.forPayment(
             totalAmount,
@@ -157,43 +136,93 @@ public class PaymentService {
         );
     }
 
-    private PaymentResponse processPointAndCardPayment(
-        PaymentRequest payment, String userEmail, int userPoint, int totalAmount) {
+    private PaymentResponse handlePointAndCardPayment(PaymentRequest payment, PaymentContext context, int totalAmount) {
+        int pointsToUse = context.getCurrentPoint();
+        int cardAmount = totalAmount - pointsToUse;
         
-        int cardAmount = totalAmount - userPoint;
-        int pointsUsed = userPoint;
-        
-        log.info("결제 금액 상세 - 총액: {}원, 아리페이사용: {}원, 카드결제: {}원", 
-            totalAmount, pointsUsed, cardAmount);
-        
-        // 카드 결제 처리
-        PgResponse cardResponse = processCardPayment(cardAmount, 
-            createPaymentProducts(payment.payment().items(), pointsUsed), userEmail);
-        
-        // 포인트 차감
-        int updatedPoints = pointService.deductPoints(userEmail, pointsUsed);
-        
-        // 결제 로그 저장
-        payLogService.savePayLog(
-            userEmail, 
-            userPoint,
-            pointsUsed,
+        // 카드 결제
+        context.cardResponse = processCardPayment(
             cardAmount,
-            cardResponse.getTransaction().getTransactionId()
+            createPaymentProducts(payment.payment().items(), pointsToUse),
+            context.getUserEmail()
         );
         
-        // 영수증 저장
-        receiptService.saveReceipt(payment.payment().items(), userEmail);
+        // 포인트 차감
+        int updatedPoints = pointService.deductPoints(context.getUserCode(), pointsToUse);
+        context.updatePoint(updatedPoints);
+        
+        // 로그 저장
+        savePaymentLog(context, pointsToUse, cardAmount);
+        saveReceipt(payment, context.getUserCode());
         
         return PaymentResponse.forPayment(
             totalAmount,
-            pointsUsed,
+            pointsToUse,
             cardAmount,
             updatedPoints,
-            cardResponse.getTransaction().getApprovalNumber()
+            context.getCardResponse().getTransaction().getApprovalNumber()
         );
     }
 
+    private PaymentResponse handleMixedPayment(PaymentRequest payment, PaymentContext context) {
+        int chargeAmount = payment.charge().amount();
+        int paymentAmount = payment.payment().totalAmount();
+        int totalAmount = chargeAmount + paymentAmount;
+        
+        // 카드 결제
+        context.cardResponse = processCardPayment(
+            totalAmount,
+            createMixedPaymentProducts(payment, chargeAmount),
+            context.getUserEmail()
+        );
+        
+        // 포인트 충전
+        int updatedPoints = pointService.chargePoints(context.getUserCode(), chargeAmount);
+        context.updatePoint(updatedPoints);
+        
+        // 로그 저장
+        saveChargeLog(context, chargeAmount);
+        saveReceipt(payment, context.getUserCode());
+        
+        return PaymentResponse.forMixed(
+            totalAmount,
+            chargeAmount,
+            paymentAmount,
+            updatedPoints,
+            context.getCardResponse().getTransaction().getApprovalNumber()
+        );
+    }
+
+    // 헬퍼 메서드들
+    private void savePaymentLog(PaymentContext context, int pointsUsed, int cardAmount) {
+        String transactionId = context.getCardResponse() != null ? 
+            context.getCardResponse().getTransaction().getTransactionId() : null;
+            
+        payLogService.savePayLog(
+            context.getUserCode(),
+            context.getInitialPoint(),
+            pointsUsed,
+            cardAmount,
+            transactionId
+        );
+    }
+
+    private void saveChargeLog(PaymentContext context, int chargeAmount) {
+        chargeLogService.saveChargeLog(
+            context.getUserCode(),
+            context.getInitialPoint(),
+            chargeAmount,
+            context.getCardResponse().getTransaction().getTransactionId()
+        );
+    }
+
+    private void saveReceipt(PaymentRequest payment, String userCode) {
+        if (payment.payment() != null && payment.payment().items() != null) {
+            receiptService.saveReceipt(payment.payment().items(), userCode);
+        }
+    }
+
+    // 기존 헬퍼 메서드들은 그대로 유지
     private PgResponse processCardPayment(int amount, List<PaymentProduct> products, String userEmail) {
         PgResponse cardResponse = pgService.processCardPayment(amount, products, userEmail);
         if (!cardResponse.isSuccess()) {

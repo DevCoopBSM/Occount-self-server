@@ -7,10 +7,7 @@ import com.devcoop.kiosk.domain.paylog.PayLog;
 import com.devcoop.kiosk.domain.paylog.repository.PayLogRepository;
 import com.devcoop.kiosk.domain.paylog.types.EventType;
 import com.devcoop.kiosk.domain.paylog.types.PaymentType;
-import com.devcoop.kiosk.domain.user.User;
-import com.devcoop.kiosk.domain.user.repository.UserRepository;
 import com.devcoop.kiosk.global.exception.GlobalException;
-import com.devcoop.kiosk.global.exception.enums.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,23 +17,17 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PayLogService {
     private final PayLogRepository payLogRepository;
-    private final UserRepository userRepository;
     
     @Transactional
-    public void savePayLog(String userEmail, int beforePoint, int pointsUsed, int cardAmount, String paymentId) throws GlobalException {
-        log.info("결제 로그 저장 시작 - userEmail: {}, beforePoint: {}, pointsUsed: {}, cardAmount: {}, paymentId: {}", 
-                userEmail, beforePoint, pointsUsed, cardAmount, paymentId);
+    public void savePayLog(String userCode, int beforePoint, int pointsUsed, int cardAmount, String paymentId) throws GlobalException {
+        log.info("결제 로그 저장 시작 - userCode: {}, beforePoint: {}, pointsUsed: {}, cardAmount: {}, paymentId: {}", 
+                userCode, beforePoint, pointsUsed, cardAmount, paymentId);
                 
-        User user = userRepository.findByUserEmail(userEmail);
-        if (user == null) {
-            throw new GlobalException(ErrorCode.USER_NOT_FOUND);
-        }
-        
         PaymentType payType = determinePaymentType(pointsUsed, cardAmount);
         log.debug("결제 유형 결정: {}", payType);
         
         PayLog payLog = PayLog.builder()
-                .userCode(user.getUserCode())
+                .userCode(userCode)
                 .beforePoint(beforePoint)
                 .payedPoint(pointsUsed)
                 .afterPoint(beforePoint - pointsUsed)

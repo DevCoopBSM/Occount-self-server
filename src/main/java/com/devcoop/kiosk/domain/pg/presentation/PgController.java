@@ -35,8 +35,8 @@ public class PgController {
         Authentication authentication
     ) {
         try {
-            String userEmail = authentication.getName();
-            PaymentResponse response = selfCounterService.executeAllTransactions(request, userEmail);
+            String userCode = authentication.getName();
+            PaymentResponse response = selfCounterService.executeAllTransactions(request, userCode);
             return ResponseEntity.ok(response);
             
         } catch (GlobalException e) {
