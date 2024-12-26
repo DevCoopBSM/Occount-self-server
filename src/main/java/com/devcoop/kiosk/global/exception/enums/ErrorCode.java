@@ -36,11 +36,13 @@ public enum ErrorCode {
     INVALID_CHARGE_AMOUNT("유효하지 않은 충전 금액입니다", 400),
     CHARGE_ITEM_NOT_FOUND("충전 상품을 찾을 수 없습니다", 404),
     CHARGE_LOG_SAVE_FAILED("충전 기록 저장에 실패했습니다", 500),
-    INVALID_ITEM_ID_FORMAT("잘못된 상품 ID 형식입니다.", 400);
+    INVALID_ITEM_ID_FORMAT("잘못된 상품 ID 형식입니다.", 400),
+    
+    // Log
+    PAYMENT_LOG_SAVE_FAILED("결제 로그 저장에 실패했습니다", 500);
 
     private final String message;
     private final int status;
-
 
     public String getMessage() {
         return message;
