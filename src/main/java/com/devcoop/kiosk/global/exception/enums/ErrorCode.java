@@ -7,6 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum ErrorCode {
     // User
+    INVALID_TOKEN("유효하지 않은 토큰입니다", 401),
     USER_NOT_FOUND("찾을 수 없는 사용자입니다", 404),
 
     // Server

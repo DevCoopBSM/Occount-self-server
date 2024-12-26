@@ -29,10 +29,10 @@ public class PgService {
     private final CardPaymentLogService cardPaymentLogService;
     
     @Transactional
-    public PgResponse processCardPayment(int amount, List<PaymentProduct> products) {
+    public PgResponse processCardPayment(int amount, List<PaymentProduct> products, String userEmail) {
         PgRequest request = createPaymentRequest(amount, products);
         PgResponse response = executePayment(request);
-        savePaymentLog(response);
+        savePaymentLog(response, userEmail);
         return response;
     }
     
@@ -105,10 +105,10 @@ public class PgService {
         }
     }
     
-    private void savePaymentLog(PgResponse response) {
+    private void savePaymentLog(PgResponse response, String userEmail) {
         if (response != null && response.isSuccess()) {
             try {
-                cardPaymentLogService.saveCardPaymentLog(response);
+                cardPaymentLogService.saveCardPaymentLog(response, userEmail);
             } catch (Exception e) {
                 log.error("카드결제 로그 저장 실패: {}", e.getMessage(), e);
                 // 로그 저장 실패는 결제 실패로 처리하지 않음

@@ -107,4 +107,19 @@ public class UserAuthService {
         user.changePin(bCryptPasswordEncoder.encode(DEFAULT_PIN_CODE)); // update 메서드를 changePin으로 변경
         userRepository.save(user);
     }
+
+    public User getUserFromToken(String token) throws GlobalException {
+        // "Bearer " 제거
+        String actualToken = token.replace("Bearer ", "");
+        
+        // 토큰에서 userCode 추출
+        String userCode = JwtUtil.getCodeNumber(actualToken, secretKey);
+        if (userCode == null) {
+            throw new GlobalException(ErrorCode.INVALID_TOKEN);
+        }
+        
+        // userCode로 사용자 조회
+        return userRepository.findByUserCode(userCode)
+            .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+    }
 }

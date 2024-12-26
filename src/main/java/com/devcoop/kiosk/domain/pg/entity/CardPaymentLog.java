@@ -24,6 +24,8 @@ public class CardPaymentLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String userEmail;           // 사용자 이메일로 변경
+
     private String transactionId;        // 거래고유번호
     private String approvalNumber;       // 승인번호
     private String cardNumber;           // 마스킹된 카드번호

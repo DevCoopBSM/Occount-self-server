@@ -21,18 +21,19 @@ public class CardPaymentLogService {
     private final CardPaymentLogRepository cardPaymentLogRepository;
 
     @Transactional
-    public void saveCardPaymentLog(PgResponse cardResponse) {
+    public void saveCardPaymentLog(PgResponse cardResponse, String userEmail) {
         try {
             if (!isValidPaymentResponse(cardResponse)) {
                 log.warn("유효하지 않은 결제 응답: {}", cardResponse);
                 return;
             }
 
-            CardPaymentLog paymentLog = buildCardPaymentLog(cardResponse);
+            CardPaymentLog paymentLog = buildCardPaymentLog(cardResponse, userEmail);
             cardPaymentLogRepository.save(paymentLog);
             
-            log.info("카드결제 로그 저장 완료 - 거래ID: {}, 금액: {}, 승인번호: {}", 
+            log.info("카드결제 로그 저장 완료 - 거래ID: {}, 사용자: {}, 금액: {}, 승인번호: {}", 
                 paymentLog.getTransactionId(),
+                paymentLog.getUserEmail(),
                 paymentLog.getAmount(),
                 paymentLog.getApprovalNumber());
                 
@@ -48,8 +49,9 @@ public class CardPaymentLogService {
                cardResponse.getTransaction() != null;
     }
 
-    private CardPaymentLog buildCardPaymentLog(PgResponse cardResponse) {
+    private CardPaymentLog buildCardPaymentLog(PgResponse cardResponse, String userEmail) {
         CardPaymentLog.CardPaymentLogBuilder builder = CardPaymentLog.builder()
+            .userEmail(userEmail)
             .transactionId(cardResponse.getTransaction().getTransactionId())
             .approvalNumber(cardResponse.getTransaction().getApprovalNumber())
             .cardNumber(cardResponse.getTransaction().getCardNumber())

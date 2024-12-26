@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,9 +30,13 @@ public class PgController {
 
     @PostMapping("/executePayments")
     @Operation(summary = "kiosk service", description = "키오스크 결제 처리 API")
-    public ResponseEntity<?> executeTransactions(@RequestBody PaymentRequest request) {
+    public ResponseEntity<?> executeTransactions(
+        @RequestBody PaymentRequest request,
+        Authentication authentication
+    ) {
         try {
-            PaymentResponse response = selfCounterService.executeAllTransactions(request);
+            String userEmail = authentication.getName();
+            PaymentResponse response = selfCounterService.executeAllTransactions(request, userEmail);
             return ResponseEntity.ok(response);
             
         } catch (GlobalException e) {
