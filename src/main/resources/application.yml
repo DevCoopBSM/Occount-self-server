@@ -56,4 +56,4 @@ payment:
     secret: ${PAYMENT_API_SECRET_KEY}
 
 api:
-  key: ${API_KEY}
+  secret: ${API_SECRET_KEY}
