@@ -24,7 +24,6 @@ import com.devcoop.kiosk.global.exception.enums.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import lombok.Getter;
 import lombok.Builder;
 
 @Service
@@ -41,7 +40,7 @@ public class PaymentService {
     @Transactional
     public PaymentResponse executeAllTransactions(PaymentRequest payment, String userCode) throws GlobalException {
         try {
-            PaymentContext context = initializePaymentContext(payment, userCode);
+            PaymentContext context = initializePaymentContext(userCode);
             
             return switch (payment.type()) {
                 case CHARGE -> handleChargePayment(payment, context);
@@ -59,21 +58,24 @@ public class PaymentService {
         }
     }
 
-    @Getter
     @Builder
-    private static class PaymentContext {
-        private final String userCode;
-        private final String userEmail;
-        private final int initialPoint;
-        private int currentPoint;
-        private PgResponse cardResponse;
+    private record PaymentContext(
+        String userCode,
+        String userEmail,
+        int initialPoint,
+        int currentPoint,
+        PgResponse cardResponse
+    ) {
+        public PaymentContext withPoint(int newPoint) {
+            return new PaymentContext(userCode, userEmail, initialPoint, newPoint, cardResponse);
+        }
         
-        public void updatePoint(int newPoint) {
-            this.currentPoint = newPoint;
+        public PaymentContext withCardResponse(PgResponse response) {
+            return new PaymentContext(userCode, userEmail, initialPoint, currentPoint, response);
         }
     }
 
-    private PaymentContext initializePaymentContext(PaymentRequest payment, String userCode) {
+    private PaymentContext initializePaymentContext(String userCode) {
         User user = userRepository.findByUserCode(userCode)
                 .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
                 
@@ -89,30 +91,31 @@ public class PaymentService {
         int chargeAmount = payment.charge().amount();
         
         // 카드 결제
-        context.cardResponse = processCardPayment(
+        var cardResponse = processCardPayment(
             chargeAmount, 
             createChargeProduct(chargeAmount), 
-            context.getUserEmail()
+            context.userEmail()
         );
+        var updatedContext = context.withCardResponse(cardResponse);
         
         // 포인트 충전
-        int updatedPoints = pointService.chargePoints(context.getUserCode(), chargeAmount);
-        context.updatePoint(updatedPoints);
+        int updatedPoints = pointService.chargePoints(updatedContext.userCode(), chargeAmount);
+        updatedContext = updatedContext.withPoint(updatedPoints);
         
         // 로그 저장
-        saveChargeLog(context, chargeAmount);
+        saveChargeLog(updatedContext, chargeAmount);
         
         return PaymentResponse.forCharge(
             chargeAmount,
             updatedPoints,
-            context.getCardResponse().getTransaction().getApprovalNumber()
+            updatedContext.cardResponse().transaction().approvalNumber()
         );
     }
 
     private PaymentResponse handleNormalPayment(PaymentRequest payment, PaymentContext context) {
         int totalAmount = payment.payment().totalAmount();
         
-        if (context.getCurrentPoint() >= totalAmount) {
+        if (context.currentPoint() >= totalAmount) {
             return handlePointOnlyPayment(payment, context, totalAmount);
         }
         return handlePointAndCardPayment(payment, context, totalAmount);
@@ -120,12 +123,12 @@ public class PaymentService {
 
     private PaymentResponse handlePointOnlyPayment(PaymentRequest payment, PaymentContext context, int totalAmount) {
         // 포인트 차감
-        int updatedPoints = pointService.deductPoints(context.getUserCode(), totalAmount);
-        context.updatePoint(updatedPoints);
+        int updatedPoints = pointService.deductPoints(context.userCode(), totalAmount);
+        context = context.withPoint(updatedPoints);
         
         // 로그 저장
         savePaymentLog(context, totalAmount, 0);
-        saveReceipt(payment, context.getUserCode());
+        saveReceipt(payment, context.userCode());
         
         return PaymentResponse.forPayment(
             totalAmount,
@@ -137,30 +140,31 @@ public class PaymentService {
     }
 
     private PaymentResponse handlePointAndCardPayment(PaymentRequest payment, PaymentContext context, int totalAmount) {
-        int pointsToUse = context.getCurrentPoint();
+        int pointsToUse = context.currentPoint();
         int cardAmount = totalAmount - pointsToUse;
         
         // 카드 결제
-        context.cardResponse = processCardPayment(
+        var cardResponse = processCardPayment(
             cardAmount,
             createPaymentProducts(payment.payment().items(), pointsToUse),
-            context.getUserEmail()
+            context.userEmail()
         );
+        var updatedContext = context.withCardResponse(cardResponse);
         
         // 포인트 차감
-        int updatedPoints = pointService.deductPoints(context.getUserCode(), pointsToUse);
-        context.updatePoint(updatedPoints);
+        int updatedPoints = pointService.deductPoints(updatedContext.userCode(), pointsToUse);
+        updatedContext = updatedContext.withPoint(updatedPoints);
         
         // 로그 저장
-        savePaymentLog(context, pointsToUse, cardAmount);
-        saveReceipt(payment, context.getUserCode());
+        savePaymentLog(updatedContext, pointsToUse, cardAmount);
+        saveReceipt(payment, updatedContext.userCode());
         
         return PaymentResponse.forPayment(
             totalAmount,
             pointsToUse,
             cardAmount,
             updatedPoints,
-            context.getCardResponse().getTransaction().getApprovalNumber()
+            updatedContext.cardResponse().transaction().approvalNumber()
         );
     }
 
@@ -170,37 +174,38 @@ public class PaymentService {
         int totalAmount = chargeAmount + paymentAmount;
         
         // 카드 결제
-        context.cardResponse = processCardPayment(
+        var cardResponse = processCardPayment(
             totalAmount,
             createMixedPaymentProducts(payment, chargeAmount),
-            context.getUserEmail()
+            context.userEmail()
         );
+        var updatedContext = context.withCardResponse(cardResponse);
         
         // 포인트 충전
-        int updatedPoints = pointService.chargePoints(context.getUserCode(), chargeAmount);
-        context.updatePoint(updatedPoints);
+        int updatedPoints = pointService.chargePoints(updatedContext.userCode(), chargeAmount);
+        updatedContext = updatedContext.withPoint(updatedPoints);
         
         // 로그 저장
-        saveChargeLog(context, chargeAmount);
-        saveReceipt(payment, context.getUserCode());
+        saveChargeLog(updatedContext, chargeAmount);
+        saveReceipt(payment, updatedContext.userCode());
         
         return PaymentResponse.forMixed(
             totalAmount,
             chargeAmount,
             paymentAmount,
             updatedPoints,
-            context.getCardResponse().getTransaction().getApprovalNumber()
+            updatedContext.cardResponse().transaction().approvalNumber()
         );
     }
 
     // 헬퍼 메서드들
     private void savePaymentLog(PaymentContext context, int pointsUsed, int cardAmount) {
-        String transactionId = context.getCardResponse() != null ? 
-            context.getCardResponse().getTransaction().getTransactionId() : null;
+        String transactionId = context.cardResponse() != null ? 
+            context.cardResponse().transaction().transactionId() : null;
             
         payLogService.savePayLog(
-            context.getUserCode(),
-            context.getInitialPoint(),
+            context.userCode(),
+            context.initialPoint(),
             pointsUsed,
             cardAmount,
             transactionId
@@ -209,10 +214,10 @@ public class PaymentService {
 
     private void saveChargeLog(PaymentContext context, int chargeAmount) {
         chargeLogService.saveChargeLog(
-            context.getUserCode(),
-            context.getInitialPoint(),
+            context.userCode(),
+            context.initialPoint(),
             chargeAmount,
-            context.getCardResponse().getTransaction().getTransactionId()
+            context.cardResponse().transaction().transactionId()
         );
     }
 
@@ -225,7 +230,7 @@ public class PaymentService {
     // 기존 헬퍼 메서드들은 그대로 유지
     private PgResponse processCardPayment(int amount, List<PaymentProduct> products, String userEmail) {
         PgResponse cardResponse = pgService.processCardPayment(amount, products, userEmail);
-        if (!cardResponse.isSuccess()) {
+        if (!cardResponse.success()) {
             throw new GlobalException(ErrorCode.PAYMENT_FAILED);
         }
         return cardResponse;

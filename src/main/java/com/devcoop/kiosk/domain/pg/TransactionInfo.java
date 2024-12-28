@@ -1,23 +1,21 @@
 package com.devcoop.kiosk.domain.pg;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Builder;
 
-@Getter
-@Setter
-public class TransactionInfo {
-    private String messageNumber;
-    private String typeCode;
-    private String cardNumber;
-    private int amount;
-    private int installmentMonths;
-    private String cancelType;
-    private String approvalNumber;
-    private String approvalDate;
-    private String approvalTime;
-    private String transactionId;
-    private String terminalId;
-    private String merchantNumber;
-    private String rejectCode;
-    private String rejectMessage;
-} 
+@Builder
+public record TransactionInfo(
+    String messageNumber,
+    String typeCode,
+    String cardNumber,
+    int amount,
+    int installmentMonths,
+    String cancelType,
+    String approvalNumber,
+    String approvalDate,
+    String approvalTime,
+    String transactionId,
+    String terminalId,
+    String merchantNumber,
+    String rejectCode,
+    String rejectMessage
+) {} 

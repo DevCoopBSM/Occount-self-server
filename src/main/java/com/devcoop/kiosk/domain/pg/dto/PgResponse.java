@@ -4,17 +4,15 @@ import com.devcoop.kiosk.domain.pg.AdditionalInfo;
 import com.devcoop.kiosk.domain.pg.CardInfo;
 import com.devcoop.kiosk.domain.pg.TransactionInfo;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Builder;
 
-@Getter
-@Setter
-public class PgResponse {
-    private boolean success;
-    private String message;
-    private String errorCode;
-    private TransactionInfo transaction;
-    private CardInfo card;
-    private AdditionalInfo additional;
-    private String rawResponse;
-} 
+@Builder
+public record PgResponse(
+    boolean success,
+    String message,
+    String errorCode,
+    TransactionInfo transaction,
+    CardInfo card,
+    AdditionalInfo additional,
+    String rawResponse
+) {} 

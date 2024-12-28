@@ -45,34 +45,34 @@ public class CardPaymentLogService {
 
     private boolean isValidPaymentResponse(PgResponse cardResponse) {
         return cardResponse != null && 
-               cardResponse.isSuccess() && 
-               cardResponse.getTransaction() != null;
+               cardResponse.success() && 
+               cardResponse.transaction() != null;
     }
 
     private CardPaymentLog buildCardPaymentLog(PgResponse cardResponse, String userEmail) {
         CardPaymentLog.CardPaymentLogBuilder builder = CardPaymentLog.builder()
             .userEmail(userEmail)
-            .transactionId(cardResponse.getTransaction().getTransactionId())
-            .approvalNumber(cardResponse.getTransaction().getApprovalNumber())
-            .cardNumber(cardResponse.getTransaction().getCardNumber())
-            .amount(cardResponse.getTransaction().getAmount())
-            .installmentMonths(cardResponse.getTransaction().getInstallmentMonths())
-            .approvalDate(cardResponse.getTransaction().getApprovalDate())
-            .approvalTime(cardResponse.getTransaction().getApprovalTime())
-            .terminalId(cardResponse.getTransaction().getTerminalId())
-            .merchantNumber(cardResponse.getTransaction().getMerchantNumber())
+            .transactionId(cardResponse.transaction().transactionId())
+            .approvalNumber(cardResponse.transaction().approvalNumber())
+            .cardNumber(cardResponse.transaction().cardNumber())
+            .amount(cardResponse.transaction().amount())
+            .installmentMonths(cardResponse.transaction().installmentMonths())
+            .approvalDate(cardResponse.transaction().approvalDate())
+            .approvalTime(cardResponse.transaction().approvalTime())
+            .terminalId(cardResponse.transaction().terminalId())
+            .merchantNumber(cardResponse.transaction().merchantNumber())
             .createdAt(LocalDateTime.now())
             .status("APPROVED");
 
-        if (cardResponse.getCard() != null) {
+        if (cardResponse.card() != null) {
             builder
-                .issuerCode(cardResponse.getCard().getIssuerCode())
-                .issuerName(cardResponse.getCard().getIssuerName())
-                .cardType(cardResponse.getCard().getCardType() != null ? 
-                    cardResponse.getCard().getCardType().name() : null)
-                .cardCategory(cardResponse.getCard().getCardCategory())
-                .cardName(cardResponse.getCard().getCardName())
-                .cardBrand(cardResponse.getCard().getCardBrand());
+                .issuerCode(cardResponse.card().issuerCode())
+                .issuerName(cardResponse.card().issuerName())
+                .cardType(cardResponse.card().cardType() != null ? 
+                    cardResponse.card().cardType().name() : null)
+                .cardCategory(cardResponse.card().cardCategory())
+                .cardName(cardResponse.card().cardName())
+                .cardBrand(cardResponse.card().cardBrand());
         }
 
         return builder.build();

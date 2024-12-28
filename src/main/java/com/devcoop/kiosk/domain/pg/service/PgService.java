@@ -39,10 +39,10 @@ public class PgService {
     private PgRequest createPaymentRequest(int amount, List<PaymentProduct> products) {
         List<ProductInfo> productInfos = products.stream()
             .map(p -> ProductInfo.builder()
-                .name(p.getName())
-                .price(p.getPrice())
-                .quantity(p.getQuantity())
-                .total(p.getTotal())
+                .name(p.name())
+                .price(p.price())
+                .quantity(p.quantity())
+                .total(p.total())
                 .build())
             .collect(Collectors.toList());
 
@@ -92,10 +92,10 @@ public class PgService {
     
     private void logPaymentResponse(PgResponse response) {
         log.info("카드 결제 응답 - 성공 여부: {}, 메시지: {}, 거래 ID: {}, 승인번호: {}", 
-            response.isSuccess(), 
-            response.getMessage(), 
-            response.getTransaction() != null ? response.getTransaction().getTransactionId() : "N/A",
-            response.getTransaction() != null ? response.getTransaction().getApprovalNumber() : "N/A");
+            response.success(), 
+            response.message(), 
+            response.transaction() != null ? response.transaction().transactionId() : "N/A",
+            response.transaction() != null ? response.transaction().approvalNumber() : "N/A");
     }
     
     private void handlePaymentError(Throwable error) {
@@ -106,7 +106,7 @@ public class PgService {
     }
     
     private void savePaymentLog(PgResponse response, String userEmail) {
-        if (response != null && response.isSuccess()) {
+        if (response != null && response.success()) {
             try {
                 cardPaymentLogService.saveCardPaymentLog(response, userEmail);
             } catch (Exception e) {
