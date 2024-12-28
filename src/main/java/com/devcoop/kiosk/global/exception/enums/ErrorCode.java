@@ -8,7 +8,8 @@ import lombok.Getter;
 public enum ErrorCode {
     // User
     INVALID_TOKEN("유효하지 않은 토큰입니다", 401),
-    USER_NOT_FOUND("찾을 수 없는 사용자입니다", 404),
+    USER_NOT_FOUND("사용자를 찾을 수 없습니다.", 401),
+    INVALID_PIN("잘못된 PIN 번호입니다.", 401),
 
     // Server
     INTERNAL_SERVER_ERROR("서버 에러가 발생하였습니다", 500),
@@ -40,7 +41,11 @@ public enum ErrorCode {
     INVALID_ITEM_ID_FORMAT("잘못된 상품 ID 형식입니다.", 400),
     
     // Log
-    PAYMENT_LOG_SAVE_FAILED("결제 로그 저장에 실패했습니다", 500);
+    PAYMENT_LOG_SAVE_FAILED("결제 로그 저장에 실패했습니다", 500),
+
+    DEFAULT_PIN_IN_USE("초기 비밀번호를 사용중입니다. 비밀번호를 변경해주세요.", 401),
+    CURRENT_PIN_INCORRECT("현재 PIN 번호가 올바르지 않습니다.", 401),
+    SAME_PIN_AS_CURRENT("현재 PIN과 동일한 번호입니다.", 400);
 
     private final String message;
     private final int status;

@@ -1,5 +1,15 @@
 package com.devcoop.kiosk.domain.user.service;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.devcoop.kiosk.domain.user.User;
 import com.devcoop.kiosk.domain.user.presentation.dto.LoginRequest;
 import com.devcoop.kiosk.domain.user.presentation.dto.LoginResponse;
@@ -8,16 +18,8 @@ import com.devcoop.kiosk.domain.user.repository.UserRepository;
 import com.devcoop.kiosk.global.exception.GlobalException;
 import com.devcoop.kiosk.global.exception.enums.ErrorCode;
 import com.devcoop.kiosk.global.utils.security.JwtUtil;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 
 @Service
@@ -35,24 +37,40 @@ public class UserAuthService {
     private String secretKey;
 
     @Transactional
-    public ResponseEntity<?> login(LoginRequest dto) throws GlobalException {
+    public ResponseEntity<?> login(LoginRequest dto) {
         String userCode = dto.userCode();
         String userPin = dto.userPin();
 
+        // 사용자 찾기
         User user = userRepository.findByUserCode(userCode)
-                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
-
-        if (!bCryptPasswordEncoder.matches(userPin, user.getUserPin())) {
-            throw new RuntimeException("핀 번호가 옳지 않습니다");
+                .orElseGet(() -> {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("code", ErrorCode.USER_NOT_FOUND.name());
+                    response.put("message", ErrorCode.USER_NOT_FOUND.getMessage());
+                    return null;
+                });
+        
+        if (user == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", ErrorCode.USER_NOT_FOUND.name());
+            response.put("message", ErrorCode.USER_NOT_FOUND.getMessage());
+            return ResponseEntity.status(ErrorCode.USER_NOT_FOUND.getStatus()).body(response);
         }
 
-        if (userCode.equals(DEFAULT_PIN_CODE) && user.getUserCode().equals(DEFAULT_PIN_CODE)) {
-            // 리다이렉션 URI과 메시지를 포함한 응답 생성
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "안전하지 않은 비밀번호입니다. 비밀번호를 변경해주세요");
-            response.put("redirectUrl", "/pin/change");
+        // PIN 번호 확인
+        if (!bCryptPasswordEncoder.matches(userPin, user.getUserPin())) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", ErrorCode.INVALID_PIN.name());
+            response.put("message", ErrorCode.INVALID_PIN.getMessage());
+            return ResponseEntity.status(ErrorCode.INVALID_PIN.getStatus()).body(response);
+        }
 
-            return ResponseEntity.status(HttpStatus.OK).body(response);
+        // 초기 비밀번호 체크
+        if (userPin.equals(DEFAULT_PIN_CODE)) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", ErrorCode.DEFAULT_PIN_IN_USE.name());
+            response.put("message", ErrorCode.DEFAULT_PIN_IN_USE.getMessage());
+            return ResponseEntity.status(ErrorCode.DEFAULT_PIN_IN_USE.getStatus()).body(response);
         }
 
         String token = JwtUtil.createJwt(userCode, secretKey, exprTime);
@@ -65,7 +83,7 @@ public class UserAuthService {
                 .userPoint(user.getUserPoint())
                 .build();
 
-        return ResponseEntity.status(HttpStatus.OK).body(response);
+        return ResponseEntity.ok(response);
     }
 
     @Transactional
